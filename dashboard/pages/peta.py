@@ -108,16 +108,16 @@ def show():
 
     # Legend
     legend_html = """
-    <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
-                background-color: white; padding: 10px; border-radius: 8px;
-                border: 2px solid grey; font-size: 13px;">
-        <b>Rata-rata Tip</b><br>
-        🔴 > 25%<br>
-        🟠 20-25%<br>
-        🔵 15-20%<br>
-        🟢 < 15%
-    </div>
-    """
+        <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
+                    background-color: white; padding: 10px; border-radius: 8px;
+                    border: 2px solid grey; font-size: 13px; color: black;">
+            <b style="color: black;">Rata-rata Tip</b><br>
+            🔴 > 25%<br>
+            🟠 20-25%<br>
+            🔵 15-20%<br>
+            🟢 < 15%
+        </div>
+        """
     m.get_root().html.add_child(folium.Element(legend_html))
 
     st_folium(m, width=900, height=500)

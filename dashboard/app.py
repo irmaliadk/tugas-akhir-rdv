@@ -8,6 +8,16 @@ st.set_page_config(
 
 st.title("🚕 Analisis Tip Taksi NYC 2025")
 st.markdown("**Prediksi Tip Tinggi & Analisis Spasial-Temporal Berbasis Data Cuaca**")
+st.markdown(
+    """
+    <style>
+        [data-testid="stSidebarNav"] {
+            display: none;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.sidebar.title("Navigasi")
 page = st.sidebar.radio("Pilih Halaman", ["🗺️ Peta", "📊 Analisis", "🤖 Prediksi"])
