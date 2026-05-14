@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
+import json
 
 @st.cache_data
 def load_data():
@@ -10,16 +11,21 @@ def load_data():
         df = df.sample(500000, random_state=42)
     return df
 
+@st.cache_data
+def load_geojson():
+    with open("data/processed/nyc_boroughs.geojson", "r") as f:
+        return json.load(f)
+
 def show():
-    st.header("🗺️ Peta Zona Tip Taksi NYC")
+    st.header("🗺️ Peta Tip Taksi NYC per Borough & Zona")
 
     df = load_data()
+    geojson = load_geojson()
 
     # =====================
     # FILTER SIDEBAR
     # =====================
     st.sidebar.header("Filter Data")
-
     jam = st.sidebar.slider("Rentang Jam", 0, 23, (0, 23))
     hari = st.sidebar.multiselect(
         "Hari",
@@ -40,18 +46,69 @@ def show():
         (df["weather_condition"].isin(cuaca))
     ]
 
-    st.markdown(f"**Total perjalanan:** {len(df_filtered):,}")
+    st.markdown(f"**Total perjalanan (sample):** {len(df_filtered):,}")
+
+    # =====================
+    # AGREGASI PER BOROUGH
+    # =====================
+    agg_borough = df_filtered.groupby("PU_Borough").agg(
+        avg_tip=("tip_percentage", "mean"),
+        total_trips=("tip_percentage", "count"),
+        high_tip_rate=("high_tip", "mean")
+    ).reset_index()
+    agg_borough.columns = ["name", "avg_tip", "total_trips", "high_tip_rate"]
 
     # =====================
     # AGREGASI PER ZONA
     # =====================
-    agg = df_filtered.groupby(["PULocationID", "PU_Zone", "PU_Borough"]).agg(
+    agg_zona = df_filtered.groupby(["PULocationID", "PU_Zone", "PU_Borough"]).agg(
         avg_tip=("tip_percentage", "mean"),
         total_trips=("tip_percentage", "count"),
         high_tip_rate=("high_tip", "mean")
     ).reset_index()
 
-    # Load koordinat zona (centroid manual untuk top zona)
+    # =====================
+    # BUAT PETA CHOROPLETH
+    # =====================
+    m = folium.Map(location=[40.7128, -74.0060], zoom_start=10)
+
+    folium.Choropleth(
+        geo_data=geojson,
+        name="Avg Tip per Borough",
+        data=agg_borough,
+        columns=["name", "avg_tip"],
+        key_on="feature.properties.name",
+        fill_color="YlOrRd",
+        fill_opacity=0.7,
+        line_opacity=0.5,
+        legend_name="Rata-rata Tip (%)",
+        nan_fill_color="lightgray"
+    ).add_to(m)
+
+    # Tooltip per borough
+    for feature in geojson["features"]:
+        name = feature["properties"]["name"]
+        row = agg_borough[agg_borough["name"] == name]
+        if len(row) > 0:
+            feature["properties"]["avg_tip"] = f"{row['avg_tip'].values[0]:.1f}%"
+            feature["properties"]["total_trips"] = f"{row['total_trips'].values[0]:,}"
+            feature["properties"]["high_tip_rate"] = f"{row['high_tip_rate'].values[0]:.1%}"
+        else:
+            feature["properties"]["avg_tip"] = "N/A"
+            feature["properties"]["total_trips"] = "0"
+            feature["properties"]["high_tip_rate"] = "N/A"
+
+    folium.GeoJson(
+        geojson,
+        style_function=lambda x: {"fillOpacity": 0, "weight": 0},
+        tooltip=folium.GeoJsonTooltip(
+            fields=["name", "avg_tip", "total_trips", "high_tip_rate"],
+            aliases=["Borough:", "Avg Tip:", "Total Trips:", "High Tip Rate:"],
+        )
+    ).add_to(m)
+
+    # Tambah marker per zona (top 50 zona berdasarkan total trips)
+    top_zones = agg_zona.nlargest(50, "total_trips")
     zone_coords = {
         "JFK Airport": (40.6413, -73.7781),
         "LaGuardia Airport": (40.7769, -73.8740),
@@ -69,25 +126,27 @@ def show():
         "SoHo": (40.7233, -74.0020),
         "Financial District North": (40.7092, -74.0131),
         "Financial District South": (40.7033, -74.0170),
-        "Brooklyn": (40.6782, -73.9442),
         "Astoria": (40.7721, -73.9302),
         "Harlem": (40.8116, -73.9465),
         "East Harlem North": (40.7957, -73.9389),
+        "East Harlem South": (40.7905, -73.9389),
+        "Yorkville East": (40.7736, -73.9447),
+        "Yorkville West": (40.7736, -73.9527),
+        "Lincoln Square East": (40.7731, -73.9845),
+        "Lincoln Square West": (40.7731, -73.9895),
+        "Clinton East": (40.7631, -73.9895),
+        "Clinton West": (40.7631, -73.9945),
+        "Garment District": (40.7506, -73.9971),
+        "Flatiron": (40.7401, -73.9901),
+        "Gramercy": (40.7368, -73.9845),
+        "Murray Hill": (40.7484, -73.9767),
     }
 
-    # =====================
-    # BUAT PETA FOLIUM
-    # =====================
-    m = folium.Map(location=[40.7128, -74.0060], zoom_start=11)
-
-    for _, row in agg.iterrows():
-        zone_name = row["PU_Zone"]
-        coords = zone_coords.get(zone_name)
+    for _, row in top_zones.iterrows():
+        coords = zone_coords.get(row["PU_Zone"])
         if coords is None:
             continue
-
         avg_tip = row["avg_tip"]
-        # Warna berdasarkan avg tip
         if avg_tip > 25:
             color = "red"
         elif avg_tip > 20:
@@ -96,39 +155,26 @@ def show():
             color = "blue"
         else:
             color = "green"
-
+        radius = max(5, min(20, row["total_trips"] / 500))
         folium.CircleMarker(
             location=coords,
-            radius=8,
+            radius=radius,
             color=color,
             fill=True,
-            fill_opacity=0.7,
-            tooltip=f"{zone_name}<br>Avg Tip: {avg_tip:.1f}%<br>Total Trips: {row['total_trips']:,}<br>High Tip Rate: {row['high_tip_rate']:.1%}"
+            fill_opacity=0.8,
+            tooltip=f"{row['PU_Zone']}<br>Avg Tip: {avg_tip:.1f}%<br>Total Trips: {row['total_trips']:,}<br>High Tip Rate: {row['high_tip_rate']:.1%}"
         ).add_to(m)
 
-    # Legend
-    legend_html = """
-        <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
-                    background-color: white; padding: 10px; border-radius: 8px;
-                    border: 2px solid grey; font-size: 13px; color: black;">
-            <b style="color: black;">Rata-rata Tip</b><br>
-            🔴 > 25%<br>
-            🟠 20-25%<br>
-            🔵 15-20%<br>
-            🟢 < 15%
-        </div>
-        """
-    m.get_root().html.add_child(folium.Element(legend_html))
-
+    folium.LayerControl().add_to(m)
     st_folium(m, width=900, height=500)
 
     # =====================
     # TABEL TOP ZONA
     # =====================
     st.subheader("Top 10 Zona dengan Tip Tertinggi")
-    top_zones = agg.sort_values("avg_tip", ascending=False).head(10)
-    top_zones = top_zones[["PU_Zone", "PU_Borough", "avg_tip", "total_trips", "high_tip_rate"]]
-    top_zones.columns = ["Zona", "Borough", "Avg Tip (%)", "Total Trips", "High Tip Rate"]
-    top_zones["Avg Tip (%)"] = top_zones["Avg Tip (%)"].round(1)
-    top_zones["High Tip Rate"] = (top_zones["High Tip Rate"] * 100).round(1).astype(str) + "%"
-    st.dataframe(top_zones, use_container_width=True)
+    top10 = agg_zona.sort_values("avg_tip", ascending=False).head(10)
+    top10["high_tip_pct"] = (top10["high_tip_rate"] * 100).round(1).astype(str) + "%"
+    top10 = top10[["PU_Zone", "PU_Borough", "avg_tip", "total_trips", "high_tip_pct"]]
+    top10.columns = ["Zona", "Borough", "Avg Tip (%)", "Total Trips", "High Tip Rate"]
+    top10["Avg Tip (%)"] = top10["Avg Tip (%)"].round(1)
+    st.dataframe(top10, use_container_width=True)
