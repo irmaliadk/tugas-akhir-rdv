@@ -43,6 +43,7 @@ def run_preprocessing():
             -- Lokasi harus ada
             AND PULocationID IS NOT NULL
             AND DOLocationID IS NOT NULL
+
     """)
 
     after_clean = con.execute("SELECT COUNT(*) FROM clean_trips").fetchone()[0]
@@ -58,6 +59,8 @@ def run_preprocessing():
         FROM clean_trips t
         LEFT JOIN read_csv('data/processed/dim_zones.csv') z
             ON t.PULocationID = z.LocationID
+        WHERE z.Borough != 'Unknown'
+            AND z.Borough IS NOT NULL
     """)
 
     con.execute("""
