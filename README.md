@@ -332,29 +332,22 @@ tugas-akhir-rdv/
 │   └── utils.py
 │       └── Fungsi shared seperti load_data()
 │
-├── dashboard/
-│   │
-│   ├── app.py
-│   │   └── Main Streamlit app
-│   │
-│   └── pages/
-│       │
-│       ├── peta.py
-│       │   └── Halaman peta interaktif
-│       │
-│       ├── analisis.py
-│       │   └── Analisis temporal & cuaca
-│       │
-│       └── prediksi.py
-│           └── Halaman prediksi Machine Learning
-│
-└── laporan/
-    │
-    ├── Laporan_Tugas_Akhir_RDV.pdf
-    │   └── Laporan final proyek
-    │
-    └── slide_presentasi.pdf
-        └── Slide presentasi
+└── dashboard/
+   │
+   ├── app.py
+   │   └── Main Streamlit app
+   │
+   └── pages/
+       │
+       ├── peta.py
+       │   └── Halaman peta interaktif
+       │
+       ├── analisis.py
+       │   └── Analisis temporal & cuaca
+       │
+       └── prediksi.py
+           └── Halaman prediksi Machine Learning
+
 ```
 
 
