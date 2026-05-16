@@ -16,9 +16,9 @@
 
 | NIM | Nama | Role | Tugas |
 |---|---|---|---|
-| NIM_1 | Nama_1 | Data Architect & Project Leader | Menentukan tujuan proyek, merancang arsitektur pipeline, mendesain skema data, membuat laporan & slide presentasi |
-| NIM_2 | Nama_2 | Data Engineer | Menulis script ingestion.py (download TLC + weather API), preprocessing.py (ETL dengan DuckDB), feature_engineering.py, mengatur Prefect pipeline |
-| NIM_3 | Nama_3 | Data Analyst & ML Engineer | Menulis ml_training.py (Random Forest), membangun dashboard Streamlit (peta, analisis, prediksi), analisis insight dari data |
+| 235150200111013 | Irmalia Dwi Kautsar | Data Architect & Project Leader | Menentukan tujuan proyek, merancang arsitektur pipeline, mendesain skema data.
+| 235150200111045 | Faiz Habibina Umiyabi | Data Engineer | Menulis script ingestion.py (download TLC + weather API), preprocessing.py (ETL dengan DuckDB), feature_engineering.py, mengatur Prefect pipeline |
+| 235150201111008 | Muhammad Bagas Anugrah | Data Analyst & ML Engineer | Menulis ml_training.py (Random Forest), membangun dashboard Streamlit (peta, analisis, prediksi), analisis insight dari data |
 
 ---
 
@@ -71,53 +71,67 @@
 ---
 
 ## 🏗️ Arsitektur Pipeline
-[NYC TLC Website]           [Open-Meteo API]        [Zone Lookup CSV]
-│                           │                        │
-▼                           ▼                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    PHASE 1: DATA INGESTION                      │
-│                    scripts/ingestion.py                         │
-│                    Orchestrasi: Prefect                         │
-└─────────────────────────────────────────────────────────────────┘
-│                           │                        │
-▼                           ▼                        ▼
-data/raw/                data/processed/          data/processed/
-yellow_tripdata          dim_weather.parquet      dim_zones.csv
-2025-01,02,03.parquet
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│              PHASE 2: PREPROCESSING & CLEANING                  │
-│              scripts/preprocessing.py                           │
-│              Tools: DuckDB (SQL)                                │
-└─────────────────────────────────────────────────────────────────┘
-│
-▼  Filter anomali + Join zona & cuaca + Feature Engineering
-│
-┌─────────────────────────────────────────────────────────────────┐
-│                  PHASE 3: DATA STORAGE                          │
-│                  data/processed/fact_trips.parquet              │
-│                  Format: Parquet (Data Lake)                    │
-└─────────────────────────────────────────────────────────────────┘
-│
-├──────────────────────────┐
-▼                          ▼
-┌──────────────┐          ┌──────────────────┐
-│  PHASE 4     │          │    PHASE 5       │
-│  ANALISIS    │          │  MACHINE LEARNING│
-│  DuckDB/     │          │  Random Forest   │
-│  Pandas      │          │  scikit-learn    │
-└──────────────┘          └──────────────────┘
-│                          │
-└──────────┬───────────────┘
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   PHASE 6: VISUALISASI                          │
-│                   dashboard/app.py                              │
-│                   Tools: Streamlit + Folium                     │
-└─────────────────────────────────────────────────────────────────┘
 
----
+```text
+┌────────────────────┐     ┌────────────────────┐     ┌────────────────────┐
+│ NYC TLC Website    │     │ Open-Meteo API     │     │ Zone Lookup CSV    │
+│ (Taxi Dataset)     │     │ (Weather Data)     │     │ (Zona NYC)         │
+└─────────┬──────────┘     └─────────┬──────────┘     └─────────┬──────────┘
+          │                          │                          │
+          └────────────────┬─────────┴─────────┬────────────────┘
+                           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                  PHASE 1 — DATA INGESTION                           │
+│                  scripts/ingestion.py                               │
+│                  Orchestrasi: Prefect                               │
+└──────────────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                           DATA RAW                                  │
+│                                                                      │
+│ data/raw/yellow_tripdata_2025-01.parquet                            │
+│ data/raw/yellow_tripdata_2025-02.parquet                            │
+│ data/raw/yellow_tripdata_2025-03.parquet                            │
+│                                                                      │
+│ data/processed/dim_weather.parquet                                  │
+│ data/processed/dim_zones.csv                                        │
+└──────────────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│             PHASE 2 — PREPROCESSING & CLEANING                      │
+│             scripts/preprocessing.py                                │
+│             Tools: DuckDB + Pandas                                  │
+└──────────────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+        Filter anomali + Join cuaca & zona + Feature Engineering
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                  PHASE 3 — DATA STORAGE                             │
+│                  data/processed/fact_trips.parquet                  │
+│                  Format: Parquet (Data Lake)                        │
+└──────────────────────────────────────────────────────────────────────┘
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+
+┌───────────────────────────┐   ┌────────────────────────────┐
+│     PHASE 4 — ANALISIS    │   │  PHASE 5 — MACHINE LEARNING│
+│     DuckDB / Pandas       │   │  Random Forest             │
+│                            │   │  scikit-learn             │
+└───────────────────────────┘   └────────────────────────────┘
+              │                         │
+              └────────────┬────────────┘
+                           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                 PHASE 6 — VISUALISASI                               │
+│                 dashboard/app.py                                    │
+│                 Tools: Streamlit + Folium                           │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
 ## 🔧 Penjelasan Tahapan Pipeline
 
@@ -277,34 +291,72 @@ Buka browser di `http://localhost:8501`
 
 ## 📁 Struktur Folder
 
+## 📁 Struktur Folder
+
+```text
 tugas-akhir-rdv/
 │
-├── README.md                          # Dokumentasi proyek
-├── requirements.txt                   # Library yang dibutuhkan
-├── .gitignore                         # Abaikan file data mentah & model
+├── README.md
+│   └── Dokumentasi proyek
+│
+├── requirements.txt
+│   └── Library yang dibutuhkan
+│
+├── .gitignore
+│   └── Abaikan file data mentah & model
 │
 ├── data/
-│   ├── raw/                           # Data mentah TLC (tidak di-push ke Git)
-│   ├── processed/                     # Data bersih, zona, cuaca, GeoJSON
-│   └── models/                        # Model ML (.pkl)
+│   │
+│   ├── raw/
+│   │   └── Data mentah TLC (tidak di-push ke Git)
+│   │
+│   ├── processed/
+│   │   └── Data bersih, zona, cuaca, dan GeoJSON
+│   │
+│   └── models/
+│       └── Model Machine Learning (.pkl)
 │
 ├── scripts/
-│   ├── ingestion.py                   # Download data (Prefect pipeline)
-│   ├── preprocessing.py               # Cleaning & ETL (DuckDB)
-│   ├── feature_engineering.py         # Verifikasi & statistik fitur
-│   ├── ml_training.py                 # Training Random Forest
-│   └── utils.py                       # Fungsi load_data() shared
+│   │
+│   ├── ingestion.py
+│   │   └── Download data (Prefect pipeline)
+│   │
+│   ├── preprocessing.py
+│   │   └── Cleaning & ETL (DuckDB)
+│   │
+│   ├── feature_engineering.py
+│   │   └── Verifikasi & statistik fitur
+│   │
+│   ├── ml_training.py
+│   │   └── Training Random Forest
+│   │
+│   └── utils.py
+│       └── Fungsi shared seperti load_data()
 │
 ├── dashboard/
-│   ├── app.py                         # Main Streamlit app
+│   │
+│   ├── app.py
+│   │   └── Main Streamlit app
+│   │
 │   └── pages/
-│       ├── peta.py                    # Halaman peta interaktif
-│       ├── analisis.py                # Halaman analisis temporal & cuaca
-│       └── prediksi.py                # Halaman prediksi ML
+│       │
+│       ├── peta.py
+│       │   └── Halaman peta interaktif
+│       │
+│       ├── analisis.py
+│       │   └── Analisis temporal & cuaca
+│       │
+│       └── prediksi.py
+│           └── Halaman prediksi Machine Learning
 │
 └── laporan/
-    ├── Laporan_Tugas_Akhir_RDV.pdf    # Laporan final
-    └── slide_presentasi.pdf           # Slide presentasi
+    │
+    ├── Laporan_Tugas_Akhir_RDV.pdf
+    │   └── Laporan final proyek
+    │
+    └── slide_presentasi.pdf
+        └── Slide presentasi
+```
 
 
 ## 📊 Hasil & Insight Utama
@@ -323,4 +375,3 @@ tugas-akhir-rdv/
 - Data fact_trips.parquet tidak di-push ke GitHub karena ukurannya 157MB (melebihi batas 100MB GitHub). File ini di-generate ulang dengan menjalankan pipeline dari awal.
 - Zona taksi Staten Island (12 zona) tidak memiliki data trip karena taksi kuning NYC jarang beroperasi di sana.
 - Model ML menggunakan sample 500.000 baris dari 7.3 juta baris untuk efisiensi memori di GitHub Codespaces.
-ENDOFFILE
