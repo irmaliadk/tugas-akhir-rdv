@@ -73,6 +73,7 @@ if __name__ == "__main__":
     # Simpan hasil prediksi ke parquet
     print("Menyimpan hasil prediksi ke fact_trips.parquet...")
     df_full = pd.read_parquet("data/processed/fact_trips.parquet")
+    df_full["weather_condition"] = df_full["weather_condition"].fillna("Clear")
     df_full["day_encoded"] = le_day.transform(df_full["day_of_week"])
     df_full["weather_encoded"] = le_weather.transform(df_full["weather_condition"])
 

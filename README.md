@@ -353,13 +353,11 @@ tugas-akhir-rdv/
 
 ## 📊 Hasil & Insight Utama
 
-⚠️ Isi bagian ini setelah melihat hasil dashboard
-
-1. Zona terbaik: [Isi dari tabel zona di dashboard]
-2. Jam terbaik: [Isi dari grafik jam di dashboard]
-3. Hari terbaik: [Isi dari grafik hari di dashboard]
-4. Pengaruh cuaca: [Isi dari grafik cuaca di dashboard]
-5. Akurasi model ML: 72% dengan threshold tip >25%
+1. **Zona terbaik:** Flatiron (Manhattan) dengan rata-rata tip **27.51%**, diikuti Upper East Side South (27.42%) dan Greenwich Village North (27.35%). Seluruh top 5 zona berada di Manhattan.
+2. **Jam terbaik:** Tip tertinggi terjadi pada jam **18:00** (27.62%), **19:00** (27.48%), dan **17:00** (27.26%) — menunjukkan jam pulang kerja adalah waktu paling menguntungkan bagi pengemudi.
+3. **Hari terbaik:** **Selasa** menghasilkan rata-rata tip tertinggi (26.11%), sementara hari Minggu paling rendah (24.97%). Hari kerja secara konsisten lebih tinggi dari akhir pekan.
+4. **Pengaruh cuaca:** Kondisi **Snow** menghasilkan tip tertinggi (25.73%), diikuti Clear (25.72%). Menariknya, hujan justru menghasilkan tip lebih rendah — kemungkinan karena penumpang lebih terburu-buru.
+5. **Akurasi model ML:** 72% dengan threshold tip >25%. Sebanyak **60.55%** perjalanan termasuk kategori tip tinggi. Fitur paling berpengaruh adalah durasi perjalanan (43.33%) dan jarak (40.80%).
 
 
 ## 📝 Catatan Teknis

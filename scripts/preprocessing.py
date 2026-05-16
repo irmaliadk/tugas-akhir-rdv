@@ -93,6 +93,7 @@ def run_preprocessing():
         WHERE
             DATEDIFF('minute', tpep_pickup_datetime, tpep_dropoff_datetime) > 0
             AND DATEDIFF('minute', tpep_pickup_datetime, tpep_dropoff_datetime) < 180
+            AND (tip_amount / fare_amount) * 100 <= 100
     """)
 
     final_count = con.execute("SELECT COUNT(*) FROM fact_trips_view").fetchone()[0]
