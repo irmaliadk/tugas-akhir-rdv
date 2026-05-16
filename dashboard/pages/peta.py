@@ -12,6 +12,15 @@ def load_data():
     return df
 
 @st.cache_data
+def load_data_full():
+    """Load semua data tanpa sampling, hanya kolom yang dibutuhkan untuk tabel zona"""
+    df = pd.read_parquet(
+        "data/processed/fact_trips.parquet",
+        columns=["PULocationID", "PU_Zone", "PU_Borough", "tip_percentage", "high_tip_v2"]
+    )
+    return df
+
+@st.cache_data
 def load_geojson():
     with open("data/processed/nyc_boroughs.geojson", "r") as f:
         return json.load(f)
@@ -54,17 +63,18 @@ def show():
     agg_borough = df_filtered.groupby("PU_Borough").agg(
         avg_tip=("tip_percentage", "mean"),
         total_trips=("tip_percentage", "count"),
-        high_tip_rate=("high_tip", "mean")
+        high_tip_rate=("high_tip_v2", "mean")
     ).reset_index()
     agg_borough.columns = ["name", "avg_tip", "total_trips", "high_tip_rate"]
 
     # =====================
-    # AGREGASI PER ZONA
+    # AGREGASI PER ZONA (pakai data penuh)
     # =====================
-    agg_zona = df_filtered.groupby(["PULocationID", "PU_Zone", "PU_Borough"]).agg(
+    df_full = load_data_full()
+    agg_zona = df_full.groupby(["PULocationID", "PU_Zone", "PU_Borough"]).agg(
         avg_tip=("tip_percentage", "mean"),
         total_trips=("tip_percentage", "count"),
-        high_tip_rate=("high_tip", "mean")
+        high_tip_rate=("high_tip_v2", "mean")
     ).reset_index()
 
     # =====================
@@ -107,74 +117,34 @@ def show():
         )
     ).add_to(m)
 
-    # Tambah marker per zona (top 50 zona berdasarkan total trips)
-    top_zones = agg_zona.nlargest(50, "total_trips")
-    zone_coords = {
-        "JFK Airport": (40.6413, -73.7781),
-        "LaGuardia Airport": (40.7769, -73.8740),
-        "Times Sq/Theatre District": (40.7580, -73.9855),
-        "Midtown Center": (40.7549, -73.9840),
-        "Upper East Side North": (40.7736, -73.9566),
-        "Upper East Side South": (40.7648, -73.9627),
-        "Upper West Side North": (40.7870, -73.9754),
-        "Upper West Side South": (40.7784, -73.9817),
-        "Midtown East": (40.7549, -73.9706),
-        "Penn Station/Madison Sq West": (40.7501, -73.9967),
-        "Chelsea": (40.7465, -74.0014),
-        "Greenwich Village North": (40.7337, -74.0027),
-        "Greenwich Village South": (40.7282, -74.0027),
-        "SoHo": (40.7233, -74.0020),
-        "Financial District North": (40.7092, -74.0131),
-        "Financial District South": (40.7033, -74.0170),
-        "Astoria": (40.7721, -73.9302),
-        "Harlem": (40.8116, -73.9465),
-        "East Harlem North": (40.7957, -73.9389),
-        "East Harlem South": (40.7905, -73.9389),
-        "Yorkville East": (40.7736, -73.9447),
-        "Yorkville West": (40.7736, -73.9527),
-        "Lincoln Square East": (40.7731, -73.9845),
-        "Lincoln Square West": (40.7731, -73.9895),
-        "Clinton East": (40.7631, -73.9895),
-        "Clinton West": (40.7631, -73.9945),
-        "Garment District": (40.7506, -73.9971),
-        "Flatiron": (40.7401, -73.9901),
-        "Gramercy": (40.7368, -73.9845),
-        "Murray Hill": (40.7484, -73.9767),
-    }
-
-    for _, row in top_zones.iterrows():
-        coords = zone_coords.get(row["PU_Zone"])
-        if coords is None:
-            continue
-        avg_tip = row["avg_tip"]
-        if avg_tip > 25:
-            color = "red"
-        elif avg_tip > 20:
-            color = "orange"
-        elif avg_tip > 15:
-            color = "blue"
-        else:
-            color = "green"
-        radius = max(5, min(20, row["total_trips"] / 500))
-        folium.CircleMarker(
-            location=coords,
-            radius=radius,
-            color=color,
-            fill=True,
-            fill_opacity=0.8,
-            tooltip=f"{row['PU_Zone']}<br>Avg Tip: {avg_tip:.1f}%<br>Total Trips: {row['total_trips']:,}<br>High Tip Rate: {row['high_tip_rate']:.1%}"
-        ).add_to(m)
-
     folium.LayerControl().add_to(m)
     st_folium(m, width=900, height=500)
 
     # =====================
-    # TABEL TOP ZONA
+    # TABEL SEMUA ZONA
     # =====================
-    st.subheader("Top 10 Zona dengan Tip Tertinggi")
-    top10 = agg_zona.sort_values("avg_tip", ascending=False).head(10)
-    top10["high_tip_pct"] = (top10["high_tip_rate"] * 100).round(1).astype(str) + "%"
-    top10 = top10[["PU_Zone", "PU_Borough", "avg_tip", "total_trips", "high_tip_pct"]]
-    top10.columns = ["Zona", "Borough", "Avg Tip (%)", "Total Trips", "High Tip Rate"]
-    top10["Avg Tip (%)"] = top10["Avg Tip (%)"].round(1)
-    st.dataframe(top10, use_container_width=True)
+    st.subheader("📋 Semua Zona Berdasarkan Rata-rata Tip")
+
+    tabel = agg_zona.copy()
+    tabel["High Tip Rate"] = (tabel["high_tip_rate"] * 100).round(1).astype(str) + "%"
+    tabel["avg_tip"] = tabel["avg_tip"].round(1)
+    tabel = tabel.sort_values("avg_tip", ascending=False)
+    tabel = tabel[["PU_Zone", "PU_Borough", "avg_tip", "total_trips", "High Tip Rate"]]
+    tabel.columns = ["Zona", "Borough", "Avg Tip (%)", "Total Trips", "High Tip Rate"]
+    tabel = tabel.reset_index(drop=True)
+    tabel.index += 1
+
+    # Search
+    search = st.text_input("🔍 Cari zona...", "")
+    if search:
+        tabel = tabel[tabel["Zona"].str.contains(search, case=False, na=False)]
+
+    # Pagination
+    page_size = 20
+    total_pages = max(1, (len(tabel) - 1) // page_size + 1)
+    page = st.number_input("Halaman", min_value=1, max_value=total_pages, value=1, step=1)
+    start = (page - 1) * page_size
+    end = start + page_size
+
+    st.caption(f"Menampilkan {start+1}-{min(end, len(tabel))} dari {len(tabel)} zona")
+    st.dataframe(tabel.iloc[start:end], use_container_width=True)
