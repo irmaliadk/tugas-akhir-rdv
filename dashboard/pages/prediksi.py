@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import numpy as np
 
 @st.cache_resource
 def load_model():
@@ -10,15 +9,24 @@ def load_model():
     le_weather = joblib.load("data/models/le_weather.pkl")
     return model, le_day, le_weather
 
+@st.cache_data
+def load_zones():
+    zones = pd.read_csv("data/processed/dim_zones.csv")
+    return zones[["LocationID", "Zone", "Borough"]].dropna()
+
 def show():
     st.header("🤖 Prediksi Tip Tinggi")
     st.markdown("Masukkan detail perjalanan untuk memprediksi apakah penumpang akan memberikan tip tinggi (>20%)")
 
     model, le_day, le_weather = load_model()
+    zones = load_zones()
 
-    # =====================
-    # FORM INPUT
-    # =====================
+    # Buat pilihan zona: "Nama Zona (Borough)" -> LocationID
+    zone_options = {
+        f"{row['Zone']} ({row['Borough']})": row['LocationID']
+        for _, row in zones.iterrows()
+    }
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -29,27 +37,29 @@ def show():
 
     with col2:
         penumpang = st.number_input("Jumlah Penumpang", min_value=1, max_value=6, value=1)
-        zona = st.number_input("Zona Penjemputan (LocationID 1-265)", min_value=1, max_value=265, value=161)
+        zona_label = st.selectbox("Zona Penjemputan", options=list(zone_options.keys()))
+        zona_id = zone_options[zona_label]
         cuaca = st.selectbox("Kondisi Cuaca", ["Clear", "Light Rain", "Heavy Rain", "Snow"])
 
-    # =====================
-    # PREDIKSI
-    # =====================
     if st.button("🔍 Prediksi Sekarang", type="primary"):
         try:
             hari_encoded = le_day.transform([hari])[0]
+        except:
+            st.error("Hari tidak dikenal oleh model. Coba pilih hari lain.")
+            return
+
+        try:
             cuaca_encoded = le_weather.transform([cuaca])[0]
         except:
-            # Jika label tidak dikenal, gunakan 0
-            hari_encoded = 0
-            cuaca_encoded = 0
+            st.error("Kondisi cuaca tidak dikenal oleh model. Coba pilih kondisi lain.")
+            return
 
         input_data = pd.DataFrame([{
             "hour_of_day": jam,
             "day_of_week": hari_encoded,
             "trip_distance": jarak,
             "passenger_count": penumpang,
-            "PULocationID": zona,
+            "PULocationID": zona_id,
             "weather_condition": cuaca_encoded,
             "duration_minutes": durasi
         }])
@@ -60,9 +70,9 @@ def show():
         st.divider()
 
         if pred == 1:
-            st.success(f"✅ **Kemungkinan Tip Tinggi (>20%)**")
+            st.success("✅ **Kemungkinan Tip Tinggi (>20%)**")
         else:
-            st.warning(f"⚠️ **Kemungkinan Tip Rendah atau Normal**")
+            st.warning("⚠️ **Kemungkinan Tip Rendah atau Normal**")
 
         col_a, col_b = st.columns(2)
         col_a.metric("Probabilitas Tip Tinggi", f"{prob[1]:.1%}")
@@ -71,8 +81,10 @@ def show():
         st.divider()
         st.subheader("💡 Rekomendasi untuk Pengemudi")
         if prob[1] >= 0.7:
-            st.info("Kondisi sangat baik! Perjalanan ini berpotensi menghasilkan tip tinggi.")
+            st.info(f"Kondisi sangat baik! Perjalanan dari **{zona_label}** pada jam **{jam}:00** "
+                    f"hari **{hari}** berpotensi tinggi menghasilkan tip >20%.")
         elif prob[1] >= 0.5:
-            st.info("Kondisi cukup baik. Berikan pelayanan terbaik untuk meningkatkan peluang tip tinggi.")
+            st.info(f"Kondisi cukup baik. Berikan pelayanan terbaik untuk meningkatkan peluang tip tinggi.")
         else:
-            st.info("Pertimbangkan mencari penumpang di zona atau jam yang berbeda untuk peluang tip lebih tinggi.")
+            st.info(f"Pertimbangkan mencari penumpang di zona atau jam yang berbeda "
+                    f"untuk peluang tip lebih tinggi.")

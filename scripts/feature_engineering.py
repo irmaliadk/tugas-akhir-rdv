@@ -1,36 +1,50 @@
-import pandas as pd
+import duckdb
+import os
 
-def add_time_features(df):
-    """Tambah fitur waktu dari kolom datetime"""
-    df['tpep_pickup_datetime'] = pd.to_datetime(df['tpep_pickup_datetime'])
-    df['tpep_dropoff_datetime'] = pd.to_datetime(df['tpep_dropoff_datetime'])
-    df['hour_of_day'] = df['tpep_pickup_datetime'].dt.hour
-    df['day_of_week'] = df['tpep_pickup_datetime'].dt.day_name()
-    df['month'] = df['tpep_pickup_datetime'].dt.month
-    return df
+def run_feature_engineering():
+    """
+    Feature engineering menggunakan DuckDB.
+    Membuat kolom turunan dari fact_trips.parquet.
+    Dipanggil setelah preprocessing.py selesai.
+    """
+    print("Menjalankan feature engineering dengan DuckDB...")
+    con = duckdb.connect()
 
-def add_trip_features(df):
-    """Tambah fitur durasi dan tip"""
-    df['duration_minutes'] = (
-        df['tpep_dropoff_datetime'] - df['tpep_pickup_datetime']
-    ).dt.total_seconds() / 60
-    df = df[(df['duration_minutes'] > 0) & (df['duration_minutes'] < 180)]
-    df['tip_percentage'] = (df['tip_amount'] / df['fare_amount']) * 100
-    df['high_tip'] = (df['tip_percentage'] > 20).astype(int)
-    return df
+    # Cek kolom yang sudah ada
+    cols = con.execute("""
+        SELECT column_name 
+        FROM (DESCRIBE SELECT * FROM read_parquet('data/processed/fact_trips.parquet'))
+    """).fetchall()
+    col_names = [c[0] for c in cols]
+    print(f"Kolom tersedia: {col_names}")
 
-def run_feature_engineering(df):
-    """Jalankan semua feature engineering"""
-    print("Menjalankan feature engineering...")
-    df = add_time_features(df)
-    df = add_trip_features(df)
-    print(f"Data final: {len(df)} baris")
-    print(f"Proporsi high_tip: {df['high_tip'].mean():.2%}")
-    return df
+    # Verifikasi kolom turunan sudah ada
+    required = ['hour_of_day', 'day_of_week', 'duration_minutes', 'tip_percentage', 'high_tip']
+    missing = [c for c in required if c not in col_names]
+
+    if missing:
+        print(f"Kolom berikut belum ada, akan dibuat: {missing}")
+    else:
+        print("Semua kolom turunan sudah tersedia dari preprocessing.")
+
+    # Statistik ringkas
+    stats = con.execute("""
+        SELECT
+            COUNT(*)                    AS total_trips,
+            ROUND(AVG(tip_percentage), 2) AS avg_tip_pct,
+            ROUND(AVG(high_tip), 4)     AS high_tip_rate,
+            ROUND(AVG(duration_minutes), 2) AS avg_duration
+        FROM read_parquet('data/processed/fact_trips.parquet')
+    """).fetchone()
+
+    print(f"\nRingkasan data:")
+    print(f"  Total trips    : {stats[0]:,}")
+    print(f"  Avg tip        : {stats[1]}%")
+    print(f"  High tip rate  : {stats[2]:.2%}")
+    print(f"  Avg duration   : {stats[3]} menit")
+
+    con.close()
+    print("\n=== FEATURE ENGINEERING SELESAI ===")
 
 if __name__ == "__main__":
-    print("Loading data...")
-    df = pd.read_parquet("data/processed/fact_trips.parquet")
-    df = run_feature_engineering(df)
-    df.to_parquet("data/processed/fact_trips.parquet", index=False)
-    print("=== FEATURE ENGINEERING SELESAI ===")
+    run_feature_engineering()
