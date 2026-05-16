@@ -28,7 +28,7 @@ def show():
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Perjalanan", f"{len(df_filtered):,}")
     col2.metric("Avg Tip", f"{df_filtered['tip_percentage'].mean():.1f}%")
-    col3.metric("High Tip Rate", f"{df_filtered['high_tip'].mean():.1%}")
+    col3.metric("High Tip Rate (>25%)", f"{df_filtered['high_tip_v2'].mean():.1%}")
     col4.metric("Avg Durasi", f"{df_filtered['duration_minutes'].mean():.1f} menit")
 
     # GRAFIK 1: Tip per Jam
@@ -81,12 +81,26 @@ def show():
     fig4, ax4 = plt.subplots(figsize=(10, 4))
     sample = df_filtered["tip_percentage"].sample(min(50000, len(df_filtered)), random_state=42)
     ax4.hist(sample, bins=50, color="mediumpurple", edgecolor="white", range=(0, 50))
-    ax4.axvline(x=20, color="red", linestyle="--", label="Threshold High Tip (20%)")
+    ax4.axvline(x=25, color="red", linestyle="--", label="Threshold High Tip (25%)")
     ax4.set_xlabel("Tip (%)")
     ax4.set_ylabel("Jumlah Perjalanan")
     ax4.legend()
     ax4.grid(True, alpha=0.3)
     st.pyplot(fig4)
-    high_tip_pct = df_filtered["high_tip"].mean() * 100
-    st.info(f"💡 Sebanyak **{high_tip_pct:.1f}%** perjalanan menghasilkan tip di atas 20%. "
+    high_tip_pct = df_filtered["high_tip_v2"].mean() * 100
+    st.info(f"💡 Sebanyak **{high_tip_pct:.1f}%** perjalanan menghasilkan tip di atas 25%. "
             f"Garis merah menunjukkan batas threshold tip tinggi yang digunakan dalam model ML.")
+
+    # GRAFIK 5: ML Probability Distribution
+    st.subheader("Distribusi Probabilitas Prediksi ML")
+    fig5, ax5 = plt.subplots(figsize=(10, 4))
+    sample_prob = df_filtered["ml_probability"].sample(min(50000, len(df_filtered)), random_state=42)
+    ax5.hist(sample_prob, bins=50, color="steelblue", edgecolor="white")
+    ax5.axvline(x=0.5, color="red", linestyle="--", label="Threshold Prediksi (0.5)")
+    ax5.set_xlabel("Probabilitas Tip Tinggi")
+    ax5.set_ylabel("Jumlah Perjalanan")
+    ax5.legend()
+    ax5.grid(True, alpha=0.3)
+    st.pyplot(fig5)
+    st.info(f"💡 Grafik ini menunjukkan distribusi probabilitas prediksi model Random Forest. "
+            f"Perjalanan dengan probabilitas >0.5 diprediksi menghasilkan tip tinggi (>25%).")
