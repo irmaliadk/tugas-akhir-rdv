@@ -73,10 +73,8 @@ if __name__ == "__main__":
     # Simpan hasil prediksi ke parquet
     print("Menyimpan hasil prediksi ke fact_trips.parquet...")
     df_full = pd.read_parquet("data/processed/fact_trips.parquet")
-    le_day2 = LabelEncoder()
-    le_weather2 = LabelEncoder()
-    df_full['day_encoded'] = le_day2.fit_transform(df_full['day_of_week'])
-    df_full['weather_encoded'] = le_weather2.fit_transform(df_full['weather_condition'])
+    df_full["day_encoded"] = le_day.transform(df_full["day_of_week"])
+    df_full["weather_encoded"] = le_weather.transform(df_full["weather_condition"])
 
     X_full = df_full[['hour_of_day', 'day_encoded', 'trip_distance',
                        'passenger_count', 'PULocationID', 'weather_encoded', 'duration_minutes']]

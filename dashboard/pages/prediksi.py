@@ -16,7 +16,7 @@ def load_zones():
 
 def show():
     st.header("🤖 Prediksi Tip Tinggi")
-    st.markdown("Masukkan detail perjalanan untuk memprediksi apakah penumpang akan memberikan tip tinggi (>20%)")
+    st.markdown("Masukkan detail perjalanan untuk memprediksi apakah penumpang akan memberikan tip tinggi (>25%)")
 
     model, le_day, le_weather = load_model()
     zones = load_zones()
@@ -70,7 +70,7 @@ def show():
         st.divider()
 
         if pred == 1:
-            st.success("✅ **Kemungkinan Tip Tinggi (>20%)**")
+            st.success("✅ **Kemungkinan Tip Tinggi (>25%)**")
         else:
             st.warning("⚠️ **Kemungkinan Tip Rendah atau Normal**")
 
@@ -82,7 +82,7 @@ def show():
         st.subheader("💡 Rekomendasi untuk Pengemudi")
         if prob[1] >= 0.7:
             st.info(f"Kondisi sangat baik! Perjalanan dari **{zona_label}** pada jam **{jam}:00** "
-                    f"hari **{hari}** berpotensi tinggi menghasilkan tip >20%.")
+                    f"hari **{hari}** berpotensi tinggi menghasilkan tip >25%.")
         elif prob[1] >= 0.5:
             st.info(f"Kondisi cukup baik. Berikan pelayanan terbaik untuk meningkatkan peluang tip tinggi.")
         else:
