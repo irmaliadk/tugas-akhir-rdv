@@ -289,7 +289,6 @@ Buka browser di `http://localhost:8501`
 
 ---
 
-## 📁 Struktur Folder
 
 ## 📁 Struktur Folder
 
