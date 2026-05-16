@@ -1,13 +1,8 @@
 import streamlit as st
+from utils import load_data
 import pandas as pd
 import matplotlib.pyplot as plt
 
-@st.cache_data
-def load_data():
-    df = pd.read_parquet("data/processed/fact_trips.parquet")
-    if len(df) > 500000:
-        df = df.sample(500000, random_state=42)
-    return df
 
 def show():
     st.header("📊 Analisis Temporal & Cuaca")
