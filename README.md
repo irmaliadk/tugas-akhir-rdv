@@ -256,7 +256,7 @@ Dashboard Streamlit dengan 3 halaman:
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/[username]/tugas-akhir-rdv.git
+git clone https://github.com/irmaliadk/tugas-akhir-rdv.git
 cd tugas-akhir-rdv
 ```
 
